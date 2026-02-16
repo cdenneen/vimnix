@@ -104,6 +104,10 @@
             vimAlias = true;
 
             package = pkgs.neovim-unwrapped;
+            plugins = with pkgs.vimPlugins; [
+              lazy-nvim
+              nvim-treesitter
+            ];
           };
 
           home.file = {

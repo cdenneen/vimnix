@@ -240,7 +240,8 @@ return {
 			-- Automatically install LSP servers (optional, e.g., mason.nvim could be used here)
 		},
 		config = function()
-			local lspconfig = require("lspconfig")
+			local has_lspconfig, lspconfig = pcall(require, "lspconfig")
+			local has_native = vim.lsp and vim.lsp.config and vim.lsp.enable
 
 			-- Customize diagnostic display (virtual text, signs, etc.)
 			vim.diagnostic.config({ virtual_text = false, signs = true, float = { border = "rounded" } })
@@ -270,47 +271,62 @@ return {
 			-- Additional completion capabilities for nvim-cmp:contentReference[oaicite:16]{index=16}
 			local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
+			local function setup_server(name, config)
+				if has_native then
+					vim.lsp.config(name, config)
+					vim.lsp.enable(name)
+				elseif has_lspconfig and lspconfig[name] then
+					lspconfig[name].setup(config)
+				end
+			end
+
 			-- Enable language servers with the above on_attach and capabilities
 			-- Go (gopls)
 			if vim.fn.executable("gopls") == 1 then
-				lspconfig.gopls.setup({ on_attach = on_attach, capabilities = capabilities })
+				setup_server("gopls", { on_attach = on_attach, capabilities = capabilities })
 			end
 			-- Python (pyright)
 			if vim.fn.executable("pyright") == 1 then
-				lspconfig.pyright.setup({ on_attach = on_attach, capabilities = capabilities })
+				setup_server("pyright", { on_attach = on_attach, capabilities = capabilities })
 			end
 			-- Rust (rust-analyzer)
 			if vim.fn.executable("rust-analyzer") == 1 then
-				lspconfig.rust_analyzer.setup({ on_attach = on_attach, capabilities = capabilities })
+				setup_server("rust_analyzer", { on_attach = on_attach, capabilities = capabilities })
 			end
 			-- JavaScript/TypeScript (tsserver via typescript-language-server)
 			if vim.fn.executable("typescript-language-server") == 1 then
-				lspconfig.ts_ls.setup({ on_attach = on_attach, capabilities = capabilities })
+				setup_server("ts_ls", { on_attach = on_attach, capabilities = capabilities })
 			end
 			-- C/C++ (clangd)
 			if vim.fn.executable("clangd") == 1 then
-				lspconfig.clangd.setup({ on_attach = on_attach, capabilities = capabilities })
+				setup_server("clangd", { on_attach = on_attach, capabilities = capabilities })
 			end
 			-- Nix (nixd)
 			if vim.fn.executable("nixd") == 1 then
-				lspconfig.nixd.setup({ on_attach = on_attach, capabilities = capabilities })
+				setup_server("nixd", { on_attach = on_attach, capabilities = capabilities })
 			end
 
-			-- KittyCAD KCL language server (custom, if available):contentReference[oaicite:17]{index=17}:contentReference[oaicite:18]{index=18}
+			-- KittyCAD KCL language server (custom, if available)
 			if vim.fn.executable("kcl-language-server") == 1 then
-				-- If not already defined in lspconfig, define it
-				local configs = require("lspconfig.configs")
-				if not configs.kcl_ls then
-					configs.kcl_ls = {
-						default_config = {
-							cmd = { "kcl-language-server", "server", "--stdio" },
-							filetypes = { "kcl" },
-							root_dir = lspconfig.util.root_pattern(".git"),
-							single_file_support = true,
-						},
-					}
+				local kcl_config = {
+					cmd = { "kcl-language-server", "server", "--stdio" },
+					filetypes = { "kcl" },
+					root_dir = function(fname)
+						return vim.fs.root(fname, { ".git" })
+					end,
+					single_file_support = true,
+					on_attach = on_attach,
+					capabilities = capabilities,
+				}
+				if has_native then
+					setup_server("kcl_ls", kcl_config)
+				elseif has_lspconfig then
+					local configs = require("lspconfig.configs")
+					if not configs.kcl_ls then
+						configs.kcl_ls = { default_config = kcl_config }
+					end
+					setup_server("kcl_ls", { on_attach = on_attach, capabilities = capabilities })
 				end
-				lspconfig.kcl_ls.setup({ on_attach = on_attach, capabilities = capabilities })
 			end
 		end,
 	},
@@ -411,7 +427,11 @@ return {
 		build = ":TSUpdate",
 		event = { "BufReadPost", "BufNewFile" },
 		config = function()
-			require("nvim-treesitter.configs").setup({
+			local ok_ts, ts = pcall(require, "nvim-treesitter.configs")
+			if not ok_ts then
+				return
+			end
+			ts.setup({
 				ensure_installed = {
 					"bash",
 					"c",
