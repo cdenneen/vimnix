@@ -32,17 +32,6 @@ return {
       opts.servers.nixd = { mason = false }
       opts.setup.nixd = skip_if_missing("nixd")
 
-      opts.servers.kcl_ls = {
-        mason = false,
-        cmd = { "kcl-language-server", "server", "--stdio" },
-        filetypes = { "kcl" },
-        root_dir = function(fname)
-          return vim.fs.root(fname, { ".git" })
-        end,
-        single_file_support = true,
-      }
-      opts.setup.kcl_ls = skip_if_missing("kcl-language-server")
-
       return opts
     end,
   },
