@@ -1,0 +1,57 @@
+name: Nightly Flake Update PR
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: nightly-flake-update
+  cancel-in-progress: true
+
+jobs:
+  update-flake-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Update flake.lock
+        run: nix flake update
+
+      - name: Create or update pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.BOT_PAT }}
+          base: main
+          branch: bot/nightly-flake-update
+          delete-branch: true
+          commit-message: "chore(nix): update flake.lock"
+          title: "chore(nix): nightly flake update"
+          body: |
+            Automated nightly flake input refresh.
+
+            This workflow:
+            - runs \`nix flake update\`
+            - commits any changes to \`flake.lock\`
+            - opens or updates this pull request
+          labels: |
+            dependencies
+          body: |
+            Automated nightly flake input refresh.
+
+            This workflow:
+            - runs `nix flake update`
+            - commits any changes to `flake.lock`
+            - opens or updates this pull request
+          labels: |
+            dependencies
