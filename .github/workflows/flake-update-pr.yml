@@ -46,11 +46,6 @@ jobs:
             - opens or updates this pull request
           labels: |
             dependencies
-          base: main
-          branch: bot/nightly-flake-update
-          delete-branch: true
-          commit-message: "chore(nix): update flake.lock"
-          title: "chore(nix): nightly flake update"
           body: |
             Automated nightly flake input refresh.
 
