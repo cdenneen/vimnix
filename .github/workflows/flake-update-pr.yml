@@ -31,6 +31,21 @@ jobs:
       - name: Create or update pull request
         uses: peter-evans/create-pull-request@v7
         with:
+          token: ${{ secrets.BOT_PAT }}
+          base: main
+          branch: bot/nightly-flake-update
+          delete-branch: true
+          commit-message: "chore(nix): update flake.lock"
+          title: "chore(nix): nightly flake update"
+          body: |
+            Automated nightly flake input refresh.
+
+            This workflow:
+            - runs \`nix flake update\`
+            - commits any changes to \`flake.lock\`
+            - opens or updates this pull request
+          labels: |
+            dependencies
           base: main
           branch: bot/nightly-flake-update
           delete-branch: true
